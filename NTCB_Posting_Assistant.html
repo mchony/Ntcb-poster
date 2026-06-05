@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>NTCB Posting Assistant</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+  
+  header { background: #1a1a1a; color: #fff; padding: 16px 20px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+  header span { font-size: 12px; color: #c8a96e; font-weight: 600; }
+
+  .tab-bar { display: flex; background: #fff; border-bottom: 1px solid #eee; overflow-x: auto; -webkit-overflow-scrolling: touch; position: sticky; top: 52px; z-index: 99; }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab { flex: 1; min-width: 80px; padding: 12px 8px; font-size: 12px; font-weight: 600; text-align: center; color: #888; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
+  .tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+
+  .screen { display: none; padding: 16px; max-width: 600px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  .card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .card-title { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: #888; margin-bottom: 12px; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat { background: #fff; border-radius: 12px; padding: 14px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .stat-num { font-size: 28px; font-weight: 800; color: #1a1a1a; line-height: 1; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-num.gold { color: #c8a96e; }
+  .stat-num.green { color: #22c55e; }
+
+  .btn { display: block; width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; text-align: center; }
+  .btn-dark { background: #1a1a1a; color: #fff; }
+  .btn-gold { background: #c8a96e; color: #1a1a1a; }
+  .btn-green { background: #22c55e; color: #fff; }
+  .btn-outline { background: #fff; color: #1a1a1a; border: 1.5px solid #e5e5e5; }
+  .btn-danger { background: #fef2f2; color: #dc2626; border: none; }
+  .btn-sm { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1.5px solid #e5e5e5; background: #fff; color: #1a1a1a; }
+  .btn-sm.green { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+  .btn-sm.amber { background: #fffbeb; color: #d97706; border-color: #fde68a; }
+  .btn-sm.red { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  .btn:disabled { opacity: 0.4; }
+
+  input[type=text], input[type=email], input[type=tel], input[type=search], textarea, select {
+    width: 100%; padding: 13px 14px; border: 1.5px solid #e5e5e5; border-radius: 10px;
+    font-size: 15px; font-family: inherit; color: #1a1a1a; background: #fff;
+    outline: none; appearance: none; -webkit-appearance: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: #1a1a1a; }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+
+  .msg-box { background: #f9f9f9; border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.7; color: #333; white-space: pre-wrap; word-break: break-word; margin: 10px 0; border: 1px solid #eee; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-green { background: #f0fdf4; color: #16a34a; }
+  .badge-amber { background: #fffbeb; color: #d97706; }
+  .badge-gray { background: #f5f5f5; color: #888; }
+
+  .group-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; gap: 10px; }
+  .group-item:last-child { border-bottom: none; }
+  .group-name { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
+  .group-meta { font-size: 12px; color: #888; }
+
+  .queue-card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border-left: 4px solid #c8a96e; }
+  .queue-card.done { border-left-color: #22c55e; opacity: 0.6; }
+
+  .progress-bar { background: #f0f0f0; border-radius: 4px; height: 6px; overflow: hidden; margin: 8px 0; }
+  .progress-fill { height: 100%; background: #1a1a1a; border-radius: 4px; transition: width 0.4s; }
+
+  .empty { text-align: center; padding: 40px 20px; color: #aaa; }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-title { font-size: 16px; font-weight: 700; color: #555; margin-bottom: 6px; }
+  .empty-body { font-size: 14px; line-height: 1.6; }
+
+  .tpl-picker { display: flex; gap: 8px; margin-bottom: 10px; }
+  .tpl-pill { flex: 1; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1.5px solid #e5e5e5; background: #fff; color: #888; cursor: pointer; text-align: center; }
+  .tpl-pill.active { border-color: #1a1a1a; color: #1a1a1a; background: #f9f9f9; }
+
+  .copy-confirm { color: #22c55e !important; }
+
+  .section-divider { font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px; }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .dot-green { background: #22c55e; }
+  .dot-amber { background: #f59e0b; }
+
+  .search-bar { position: relative; margin-bottom: 14px; }
+  .search-bar input { padding-left: 38px; }
+  .search-bar::before { content: "🔍"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>NTCB Posting Assistant</h1>
+  <span id="header-stats">0 groups</span>
+</header>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="showTab('queue')">Queue</button>
+  <button class="tab" onclick="showTab('groups')">Groups</button>
+  <button class="tab" onclick="showTab('templates')">Templates</button>
+  <button class="tab" onclick="showTab('feedback')">Feedback</button>
+</div>
+
+<!-- QUEUE TAB -->
+<div id="screen-queue" class="screen active">
+  <div class="stats">
+    <div class="stat"><div class="stat-num gold" id="q-due">0</div><div class="stat-label">Due today</div></div>
+    <div class="stat"><div class="stat-num" id="q-total">0</div><div class="stat-label">Total groups</div></div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="q-progress" style="width:0%"></div></div>
+  <div style="font-size:12px;color:#888;margin-bottom:16px;" id="q-progress-label"></div>
+  <div id="queue-content"></div>
+</div>
+
+<!-- GROUPS TAB -->
+<div id="screen-groups" class="screen">
+  <div class="card">
+    <div class="card-title">Add a group</div>
+    <div class="card-sub">Add one group at a time, or paste a list below</div>
+    <div class="field">
+      <input type="text" id="new-group-name" placeholder="Group name e.g. Audi RS6 C8 UK Group" />
+    </div>
+    <button class="btn btn-dark" onclick="addGroup()" style="margin-bottom:0;">Add group</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Bulk add</div>
+    <div class="card-sub">Paste multiple group names, one per line</div>
+    <div class="field">
+      <textarea id="bulk-groups" placeholder="Audi RS6 C8 UK Group&#10;BMW M3 G81 Touring Forum&#10;Porsche 911 GT3..." rows="5"></textarea>
+    </div>
+    <button class="btn btn-outline" onclick="bulkAdd()">Add all from list</button>
+  </div>
+  <div class="section-divider" id="groups-count-label">Your groups</div>
+  <div class="search-bar">
+    <input type="search" id="group-search" placeholder="Search groups..." oninput="renderGroups()" />
+  </div>
+  <div id="groups-list"></div>
+</div>
+
+<!-- TEMPLATES TAB -->
+<div id="screen-templates" class="screen">
+  <div class="card">
+    <div class="card-title">Template A — relationship</div>
+    <div class="card-sub">Use when posting generally — not model specific</div>
+    <div class="msg-box" id="tpl-a-preview"></div>
+    <button class="btn-sm" onclick="copyText(document.getElementById('tpl-a-preview').innerText, this)">📋 Copy</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Template B — model specific</div>
+    <div class="card-sub">Change the spec and model, copy, and post</div>
+    <div class="field" style="margin-top:8px;">
+      <label>Spec (optional)</label>
+      <input type="text" id="b-spec" placeholder="e.g. sub 65K miles, panroof" oninput="updateTplB()" />
+    </div>
+    <div class="field">
+      <label>Model</label>
+      <select id="b-model" onchange="updateTplB()"></select>
+    </div>
+    <div class="msg-box" id="tpl-b-preview"></div>
+    <button class="btn-sm" onclick="copyText(document.getElementById('tpl-b-preview').innerText, this)">📋 Copy</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Manage car models</div>
+    <div class="field" style="margin-top:8px;display:flex;gap:8px;">
+      <input type="text" id="new-model" placeholder="e.g. Audi RS6 C8" style="flex:1;" />
+      <button class="btn-sm" onclick="addModel()" style="white-space:nowrap;">+ Add</button>
+    </div>
+    <div id="models-list"></div>
+  </div>
+</div>
+
+<!-- FEEDBACK TAB -->
+<div id="screen-feedback" class="screen">
+  <div class="card">
+    <div class="card-title">Post-deal feedback request</div>
+    <div class="card-sub">Send after every completed deal to build your Google reviews</div>
+    <div class="field" style="margin-top:8px;">
+      <label>Seller's name</label>
+      <input type="text" id="fb-name" placeholder="e.g. James" oninput="updateFeedback()" />
+    </div>
+    <div class="field">
+      <label>Car sold</label>
+      <input type="text" id="fb-car" placeholder="e.g. Audi RS6 C8" oninput="updateFeedback()" />
+    </div>
+    <div class="msg-box" id="fb-preview"></div>
+    <button class="btn-sm" onclick="copyText(document.getElementById('fb-preview').innerText, this)">📋 Copy message</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Google review link</div>
+    <div class="card-sub">Add this once you have your Google Business account set up</div>
+    <div class="field" style="margin-top:8px;">
+      <input type="text" id="google-link" placeholder="https://g.page/r/..." oninput="saveGoogleLink()" />
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Your WhatsApp number</div>
+    <div class="card-sub" style="margin-bottom:0;">07826 797 282</div>
+  </div>
+</div>
+
+<script>
+const WA = "07826 797 282";
+const PROFILE = "https://www.facebook.com/groups/1164041385671447/user/61584857872479/";
+const ROTATION = 6;
+const KEY = "ntcb_poster_v2";
+
+let state = {
+  groups: [],
+  models: ["Audi RS6 C8","Audi RS4 B9","Audi RS5 B9","Audi R8","Audi TT RS","Audi S3/RS3","Audi SQ5","Audi SQ7","BMW M3 G80/G81","BMW M4 G82","BMW M5 F90","BMW M5 G90","BMW M2 G87","BMW M135i F40","BMW X3M/X4M","BMW X5M","Mercedes C63 AMG","Mercedes A45 AMG","Mercedes G63 AMG","Mercedes GLE 63","Porsche 911 GT3","Porsche 992 Turbo S","Porsche Cayenne","Porsche Macan","Range Rover L460","Land Rover Defender","McLaren","Lamborghini Huracan","Ferrari","Hyundai i20N","Hyundai i30N","Honda Civic Type R FK2","Honda Civic Type R FL5","VW Golf R","VW Golf GTI","Ford Focus RS","Cupra Formentor","Toyota GR Supra","Nissan GTR R35","Mini JCW","Aston Martin Vantage","Bentley","Rolls-Royce"],
+  googleLink: ""
+};
+
+function load() {
+  try { const s = localStorage.getItem(KEY); if (s) state = {...state, ...JSON.parse(s)}; } catch {}
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) { alert("Storage full — try removing some groups."); }
+}
+load();
+
+const TPL_A = `I've bought some lovely cars from members recently - any others considering selling?\n\n𝗧𝗿𝗮𝗱𝗲 𝗯𝘂𝘆𝗲𝗿 | 𝗧𝗿𝗮𝗱𝗲 𝗼𝗳𝗳𝗲𝗿\n- finance settled - nationwide collection - Genuine private sellers only please.\n\nNoel The Car Buyer: ${PROFILE}\n\nWhatsapp only: ${WA}`;
+
+function tplB(spec, model) {
+  const s = spec ? spec.trim() + " " : "";
+  return `Anyone selling their ${s}${model || "[MODEL]"} in the coming weeks?\n\n𝗧𝗿𝗮𝗱𝗲 𝗯𝘂𝘆𝗲𝗿 | 𝗧𝗿𝗮𝗱𝗲 𝗼𝗳𝗳𝗲𝗿 - finance settled - nationwide collection - genuine private sellers only please.\n\nNoel The Car Buyer: ${PROFILE}\n\nWhatsapp only: ${WA}`;
+}
+
+function feedbackMsg(name, car) {
+  return `Hi ${name||"[Name]"}, just wanted to say a huge thank you for trusting me with the sale of your ${car||"[Car]"} — it was a genuine pleasure dealing with you.\n\nIf you have a spare moment, an honest Google review would mean the world to me and really help other private sellers find me.\n\n${state.googleLink || "[Add your Google review link here]"}\n\nAll the best,\nNoel\nNoel The Car Buyer\nWhatsApp: ${WA}`;
+}
+
+function today() { return new Date().toISOString().split("T")[0]; }
+function daysBetween(a, b) { return Math.floor((new Date(b) - new Date(a)) / 86400000); }
+function isDue(g) { return !g.lastPosted || daysBetween(g.lastPosted, today()) >= ROTATION; }
+
+function updateHeaderStats() {
+  const due = state.groups.filter(isDue).length;
+  document.getElementById("header-stats").textContent = `${state.groups.length} groups · ${due} due`;
+}
+
+function showTab(name) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("screen-"+name).classList.add("active");
+  const tabs = ["queue","groups","templates","feedback"];
+  document.querySelectorAll(".tab")[tabs.indexOf(name)].classList.add("active");
+  if (name==="queue") renderQueue();
+  if (name==="groups") renderGroups();
+  if (name==="templates") renderTemplates();
+  if (name==="feedback") renderFeedback();
+}
+
+// ─── QUEUE ────────────────────────────────────────────────────
+
+function renderQueue() {
+  updateHeaderStats();
+  const due = state.groups.filter(isDue);
+  const total = state.groups.length;
+  const done = total - due.length;
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+
+  document.getElementById("q-due").textContent = due.length;
+  document.getElementById("q-total").textContent = total;
+  document.getElementById("q-progress").style.width = pct+"%";
+  document.getElementById("q-progress-label").textContent = total > 0 ? `${done} of ${total} posted this cycle (${pct}%)` : "";
+
+  const el = document.getElementById("queue-content");
+
+  if (total === 0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">No groups yet</div><div class="empty-body">Add your Facebook groups in the Groups tab to get started.</div></div>`;
+    return;
+  }
+
+  if (due.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">All done!</div><div class="empty-body">You've posted to all ${total} groups this cycle. They'll reset for posting again in ${ROTATION} days.</div></div>`;
+    return;
+  }
+
+  const show = due.slice(0, 20);
+  el.innerHTML = show.map((g, i) => {
+    const tpl = g.lastTemplate || "a";
+    const model = g.lastModel || (state.models[0]||"");
+    const spec = g.lastSpec || "";
+    const msg = tpl==="a" ? TPL_A : tplB(spec, model);
+    const idx = state.groups.findIndex(x => x.name === g.name);
+
+    return `<div class="queue-card" id="qc-${i}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div style="flex:1;padding-right:10px;">
+          <div class="group-name">${g.name}</div>
+          <div class="group-meta">Last posted: ${g.lastPosted || "never"}</div>
+        </div>
+        <span class="badge ${g.lastPosted?"badge-amber":"badge-gray"}">${g.lastPosted?"Due":"New"}</span>
+      </div>
+      <div class="tpl-picker">
+        <button class="tpl-pill ${tpl==="a"?"active":""}" onclick="setQueueTpl(${idx},'a',${i})">Template A</button>
+        <button class="tpl-pill ${tpl==="b"?"active":""}" onclick="setQueueTpl(${idx},'b',${i})">Template B</button>
+      </div>
+      ${tpl==="b" ? `<div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="text" placeholder="Spec e.g. sub 65K" value="${spec}" style="flex:1;font-size:13px;padding:10px 12px;" onchange="setQueueSpec(${idx},this.value,${i})"/>
+        <select style="flex:1;font-size:13px;padding:10px 12px;" onchange="setQueueModel(${idx},this.value,${i})">
+          ${state.models.map(m=>`<option ${m===model?"selected":""}>${m}</option>`).join("")}
+        </select>
+      </div>` : ""}
+      <div class="msg-box" style="font-size:12px;max-height:90px;overflow:hidden;" id="qmsg-${i}">${msg}</div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn-sm" style="flex:1;justify-content:center;" onclick="copyQMsg(${i},'${g.name}')" id="qcopy-${i}">📋 Copy</button>
+        <button class="btn-sm green" style="flex:1;justify-content:center;" onclick="markDone(${idx})">✓ Posted</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  if (due.length > 20) {
+    el.innerHTML += `<div style="text-align:center;font-size:13px;color:#888;padding:16px;background:#fff;border-radius:12px;">+${due.length-20} more groups due. Mark above as posted to reveal the next batch.</div>`;
+  }
+}
+
+function setQueueTpl(idx, tpl, i) {
+  state.groups[idx].lastTemplate = tpl;
+  save(); renderQueue();
+}
+function setQueueSpec(idx, val, i) {
+  state.groups[idx].lastSpec = val;
+  save();
+  const model = state.groups[idx].lastModel || state.models[0] || "";
+  const msg = tplB(val, model);
+  const el = document.getElementById("qmsg-"+i);
+  if (el) el.textContent = msg;
+}
+function setQueueModel(idx, val, i) {
+  state.groups[idx].lastModel = val;
+  save();
+  const spec = state.groups[idx].lastSpec || "";
+  const msg = tplB(spec, val);
+  const el = document.getElementById("qmsg-"+i);
+  if (el) el.textContent = msg;
+}
+function markDone(idx) {
+  state.groups[idx].lastPosted = today();
+  save(); renderQueue();
+}
+function copyQMsg(i, name) {
+  const g = state.groups.find(x => x.name === name);
+  if (!g) return;
+  const tpl = g.lastTemplate || "a";
+  const msg = tpl==="a" ? TPL_A : tplB(g.lastSpec||"", g.lastModel||state.models[0]||"");
+  navigator.clipboard.writeText(msg).then(() => {
+    const btn = document.getElementById("qcopy-"+i);
+    if (btn) { btn.textContent = "✓ Copied!"; btn.style.color="#22c55e"; setTimeout(()=>{ btn.innerHTML="📋 Copy"; btn.style.color=""; },2000); }
+  });
+}
+
+// ─── GROUPS ───────────────────────────────────────────────────
+
+function renderGroups() {
+  updateHeaderStats();
+  const search = (document.getElementById("group-search")?.value||"").toLowerCase();
+  const filtered = state.groups.filter(g => g.name.toLowerCase().includes(search));
+  const label = document.getElementById("groups-count-label");
+  if (label) label.textContent = `${state.groups.length} groups${search ? ` — ${filtered.length} matching` : ""}`;
+
+  const el = document.getElementById("groups-list");
+  if (state.groups.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">No groups yet</div><div class="empty-body">Add your first Facebook group above or paste a list.</div></div>`;
+    return;
+  }
+  if (filtered.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:24px;color:#aaa;font-size:14px;">No groups match your search.</div>`;
+    return;
+  }
+  el.innerHTML = filtered.map((g, fi) => {
+    const idx = state.groups.findIndex(x => x.name === g.name);
+    return `<div class="group-item">
+      <div style="flex:1;min-width:0;">
+        <div class="group-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${g.name}</div>
+        <div class="group-meta">${g.lastPosted ? "Posted: "+g.lastPosted : "Never posted"} · ${isDue(g)?"Due":"Posted recently"}</div>
+      </div>
+      <button class="btn-sm red" onclick="removeGroup(${idx})" style="flex-shrink:0;padding:8px 10px;">🗑</button>
+    </div>`;
+  }).join("");
+}
+
+function addGroup() {
+  const name = document.getElementById("new-group-name").value.trim();
+  if (!name) return;
+  if (state.groups.find(g => g.name.toLowerCase() === name.toLowerCase())) {
+    alert("Group already exists."); return;
+  }
+  state.groups.push({ name, lastPosted:"", lastTemplate:"a", lastModel:state.models[0]||"", lastSpec:"" });
+  save();
+  document.getElementById("new-group-name").value = "";
+  renderGroups();
+  updateHeaderStats();
+}
+
+function bulkAdd() {
+  const raw = document.getElementById("bulk-groups").value.trim();
+  if (!raw) return;
+  const lines = raw.split("\n").map(l=>l.trim()).filter(Boolean);
+  let added = 0;
+  lines.forEach(name => {
+    if (!state.groups.find(g => g.name.toLowerCase() === name.toLowerCase())) {
+      state.groups.push({ name, lastPosted:"", lastTemplate:"a", lastModel:state.models[0]||"", lastSpec:"" });
+      added++;
+    }
+  });
+  save();
+  document.getElementById("bulk-groups").value = "";
+  alert(`${added} groups added. ${lines.length - added} already existed.`);
+  renderGroups();
+  updateHeaderStats();
+}
+
+function removeGroup(idx) {
+  if (!confirm(`Remove "${state.groups[idx].name}"?`)) return;
+  state.groups.splice(idx, 1);
+  save(); renderGroups(); updateHeaderStats();
+}
+
+// ─── TEMPLATES ────────────────────────────────────────────────
+
+function renderTemplates() {
+  document.getElementById("tpl-a-preview").textContent = TPL_A;
+  updateTplB();
+  const modelSel = document.getElementById("b-model");
+  modelSel.innerHTML = state.models.map(m=>`<option>${m}</option>`).join("");
+  renderModelsList();
+}
+
+function updateTplB() {
+  const spec = document.getElementById("b-spec")?.value||"";
+  const model = document.getElementById("b-model")?.value||state.models[0]||"";
+  const el = document.getElementById("tpl-b-preview");
+  if (el) el.textContent = tplB(spec, model);
+}
+
+function renderModelsList() {
+  const el = document.getElementById("models-list");
+  el.innerHTML = state.models.map((m,i)=>`
+    <div class="group-item">
+      <span style="font-size:14px;font-weight:600;">${m}</span>
+      <button class="btn-sm red" onclick="removeModel(${i})">🗑</button>
+    </div>
+  `).join("");
+}
+
+function addModel() {
+  const v = document.getElementById("new-model").value.trim();
+  if (!v) return;
+  if (state.models.includes(v)) { alert("Model already exists."); return; }
+  state.models.push(v);
+  save();
+  document.getElementById("new-model").value = "";
+  renderTemplates();
+}
+
+function removeModel(i) {
+  if (!confirm(`Remove "${state.models[i]}"?`)) return;
+  state.models.splice(i,1);
+  save(); renderTemplates();
+}
+
+// ─── FEEDBACK ─────────────────────────────────────────────────
+
+function renderFeedback() {
+  document.getElementById("google-link").value = state.googleLink||"";
+  updateFeedback();
+}
+
+function updateFeedback() {
+  const name = document.getElementById("fb-name")?.value||"";
+  const car = document.getElementById("fb-car")?.value||"";
+  const el = document.getElementById("fb-preview");
+  if (el) el.textContent = feedbackMsg(name, car);
+}
+
+function saveGoogleLink() {
+  state.googleLink = document.getElementById("google-link").value.trim();
+  save(); updateFeedback();
+}
+
+// ─── UTILS ────────────────────────────────────────────────────
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = "✓ Copied!";
+    btn.style.color = "#22c55e";
+    setTimeout(() => { btn.innerHTML = orig; btn.style.color = ""; }, 2000);
+  }).catch(() => {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand("copy");
+    document.body.removeChild(ta);
+    btn.innerHTML = "✓ Copied!";
+    setTimeout(() => { btn.innerHTML = "📋 Copy"; }, 2000);
+  });
+}
+
+// ─── LOAD 427 GROUPS ON FIRST RUN ─────────────────────────────
+
+const ALL_GROUPS = ["Lamborghini Huracan / Aventador / Revuelto / Temerario Owners Group","Toyota Supra MK5/MKV Owners Club","BMW X7 Owners Club","Audi RS6 C8 UK Group","i20N Club","The Gentlemen's Driving Club","Civic Turbo Type-R FK2 Owners & Fans","BMW Individual market & discussion","Porsche 911 GT3","Mercedes-BENZ GLE","Mercedes-Benz G-Class Forum","Mercedes Benz G Class","Range Rover Sport Owners","Ferrari 458 Owners & Enthusiast (ONLY)","Official Audi S4/S5/SQ5 Owners Group (B9)","Ferrari 488","Alfa Romeo Giulia Quadrifoglio - UK Owners","Simply Mustangs UK For Sale / Wanted","Simply Mustangs UK.","Audi A3/S3/RS3 Saloon Owners Club","BMW F8X M3 & M4 - Genuine, OEM & Performance Parts","BMW 1 Series F70 Owners (120, 123, M135) 2024/2025 MY","BMW F40 1 series Owners Group m135i","BMW M135i & M140i Lovers","Audi A3/S3 & RS3 8Y UK","Hyundai N performance parts& accessories","BMW M135i (F40) Owners Club UK","Official Cupra Owners","Type R Owners Club FK2","Honda Civic Type R FK2","NEW 2023 Ford Ranger UK Owners Group","New Defender 90 Group","The New Defender Owners Group","BMW M5 Discussion Board/Marketplace","BMW M3 G81 Touring Forum","VW Golf MK 8.5 Owners UK","VW Owners - UK","VW T-ROC OWNERS CLUB","BMW M8 / 8 Series / G14 G15 G16 / Gran/Coupe/Cabriolet 840i 840d 850i M850i","GOLF R/GTI owners club, Strictly UK only","RANGE ROVER OWNER | Market Place","Cupra Formentor VZ5 group","Mercedes-Benz CLA Owners Club","The Cupra Formentor 1.5","VW GOLF GTI EDITION 40 OWNERS","Audi RS6 / RS7 4G C7 Owners","MINI F56 / F57 UK","BMW G81 M3 Touring UK Group","GOLF 7 gti, R, Tsi,TDI","GR Yaris cars and parts - for sale and wanted - UK","BMW M3 Touring Global Group - G81","VW Golf GTI & R","Hyundai i30N Owners UK","Tiguan Owners Club (UK)","Ford Transit Custom Tourneo Group - UK","McLaren Owners UK","Mercedes S-Class and CL-Class Owners UK","Mercedes CLA Owners UK","Polo GTI Owners UK","Mercedes CLS UK","Mercedes E Class Owners Club Uk","Honda Civic Type R - FK2 Owners and Fans","Hyundai i20N","BMW X3M/X4M (F97/F98) Owners Group","Rolls-Royce Owners Club","Audi S3 8V & 8Y Owners Club UK","Audi SQ7","Toyota Hilux Owners UK","Land Cruiser Club UK","Mitsubishi Evo owners + sell UK","Rolls-Royce & Bentley for sale or wanted","I Love Rolls-Royce & Bentley","ROLLS-ROYCE-HUB","AMG GLE63S","Mercedes Benz G CLASS","Mercedes Benz GLE Owners","Mercedes-Benz GLE Owners Club","Mercedes-Benz GLE W167 UK group","Skoda Owners UK","All new Hyundai i20 MKIII Owners UK (2020 Onwards)","Tiguan Owners","VW Tiguan 2024 UK","VW TIGUAN OWNERS CLUB & PARTS","BMW M3 TOURING G81 OWNERS UK","G80 / G81 / G82 M3 - M3 Touring - M4 UK Group","BMW G80 M3 G82 M4 Marketplace","Skoda Karoq Owners","Mercedes C Class Owners Club Uk","Audi R8 UK and European Owners","Audi A4S4RS4 B8-B8.5","AUDI RS5 OWNERS UK","Hyundai i30N Worldwide","A45S / CLA45S / GLA45S (W177) Owners Club","Mercedes-AMG A45 Club","Mercedes A Class UK W177 only","Mercedes A-Class (W176 & W177) UK | Buy - Sell - Trade","Mercedes A-Class W176 W177 and CLA45 Owners Club A45 A35","R8 OWNERS UK","Porsche 991 GT3 Owners Group & Marketplace","BMW X5 | G05 - F15 - E70","Cupra Formentor Worldwide","A35 CLA35 GLA35 AMG Owners","New MINI Buy Sell UK","MINI Owners Club UK","ALL MINI OWNERS CLUB (UK ONLY)","F56 Mini Owners Club UK (Car and Parts for Sale)","MINI Owners Group - OFFICIAL","Mini F55 / F56 / F57 JCW Forum","Mini F65 / F66 / F67 - 4th Gen Forum","John Cooper Works","AUDI TT/TTS/TTRS OWNER'S CLUB","Mini Cooper GP2 and GP3 Owners Club","New Mercedes SL63 AMG Group","Audi A7 S7 RS7","Porsche Macan owners","VW Golf Clubsport S","BMW X5 Owners","BMW X5 G05","C63 AMG Classifieds","Mercedes Convertible and Coupe Owners Club","Mercedes-Benz W213 Club (WorldWide)","Mercedes C Class Coupe (C205) & Cabriolet (A205)","Mercedes C Class S205 / W205 Worldwide","W205 2014-21 Mercedes C Class Cars & Parts for Sale","Audi RS Family","Cupra Ateca and Formentor Owners Club","Cupra formentor abt","RANGE ROVER OWNERS | L460 & L461","SQ7 Owners UK & Europe","Nissan R35 GTR Enthusiasts","RS4 B9.5/B9 ONLY 2.9 litre v6","Audi A6 & A7 C8 UK","Discovery 5 Owners Group","C8 Corvette owners UK","Land Rover Discovery 5 Owners Group","UK Landrover DISCOVERY sales","Land Rover Discovery - sell and buy","Land Rover Defender 90s and 110s for sale UK","Landrovers for sale and wanted UK","New Defender Mod's L663","FOR SALE: Land Rover Defender Marketplace","Mercedes Cla Class CLA45 AMG","AUDI R8 EUROPE","AUDI R8","Audi R8","BMW M4 F82 F83 / M3 F80","Lamborghini urus","BMW 2014-2021 F22/F23/F87 M235i / M240i/ M2 Owners Club","BMW M2 G87","BMW M5 CS","Porsche 911 GT3rs","Porsche 992 GT3 / GT3 RS Owners","LAMBORGHINI FAN CLUB","BMW M2 / M240i / M235i","BMW Touring Owners Club UK","BMW F90 M5 Discussion Board / Market Place","Trade 2 Trade Cars","OWNERS AUDI BUILD GROUP SQ5/Q5","Audi R8 Cars & Parts For Sale - UK","BMW G30/G31/F90 UK buying & selling","Modified Seat Ateca Owners Club","Official Civic Type R FL5/FK8 DE5 Integra Type S Owners","BMW UK 6 Series F06/ F12/F13 Owners Club","BMW G80/G82 M3 & M4 - Genuine, OEM & Performance Parts","Honda Civic Type R (FL5) Owners","Focus ST 225 & Focus RS parts","Audi R8 Gen 1 and Gen 2 UK Owners Club","Porsche Owners Buying and Selling group UK","BMW G87 M2 (Owners Group)","Mercedes A35/ A45/ A45S AMG W177 Community","Mustang Owners Club UK (Official)","The Ford RS Owners Club","The Ford RS Owners Club - Sales and Wants","Mk3 Focus RS Owners Group","Focus ST/RS Classifieds","Ford Focus RS Owners","Ford Focus RS Mk3","Audi Q5 UK forum","Audi Quattro Owners Marketplace/ Sales Page","VW GOLF GTI","DEFENDER L663 OWNERS | UK & EU","Mercedes CLA Owners Club UK/EU","Audi Quattro Owners UK","Porsche Taycan uk","Mercedes GLE W167 Owners","VW Golf MK 7 GTD Owners UK","BMW M3 Touring UK Owners - G81","Porsche 911 (992) Buy and Sell","Porsche for sale","McLaren Owners Technical Group","Aston Martin Vantage V8/V12 owner group","A35 AMG UK - classified parts and cars -For Sale","Porsche 992 GT3 RS Owners Group","Audi RS3 and S3 Owners","Porsche 911 Owners Club","Audi sq5 club","Aston Martin Owners Club Ireland","BMW XM Owners Group","Lamborghini Lovers","BMW OG M2 Owners Group (F87 N55)","RREC - The International Club for Rolls-Royce and Bentley","Audi SQ5 Group","Audi R8 Lamborghini cars and parts for sale and forums","McLaren UK","Porsche 992 Turbo / Turbo S Owners","BMW M440i X-Drive G22 , G23 , G26","BMW F20 / F21 Owners Club UK","Lamborghini Aventador","Mercedes G63","BMW M340i 340i/440i M 335i/435i M M135i/235i M140/240i/540i M and M cars","Audi Owners Club UK LTD (AOCUK)","AUDI TT Mk2 UK Owners","BMW 40i Owners Group | 140i, 240i, 340i, 440i, X4 M40i","RS6OC (UK)","SKODA OCTAVIA vRS OWNERS CLUB (UK)","UK B8/B8.5 S4/RS4 owners group","Audi A5 B9 Owners UK","Audi UK Sales Page","BMW M-Lite Owners UK","BMW Owners Group UK (Official)","BMW Enthusiasts UK","BMW F40 M135i / F44 M235i X-Drive Owners Group","BMW M135i M140i M235i M240i UK","ASTON MARTIN","Exotic Cars Worldwide! Ferrari Collectors","Lamborghini Group","Nissan R35 GTR UK","Lamborghini Huracan Enthusiasts","Aston Martin DB11 / DBS Owners","Lamborghini Huracan and Gallardo For Sale & Lease","Ferrari","Porsche 911","Porsche 911 Turbo S Legends","ASTON MARTIN !!","Lamborghini buy sell trade","C63 AMG UK","Lotus Owners and Enthusiasts","Performance Golf UK","Ferrari and Lamborghini Lovers","BMW G87 M2 2023+","Ferrari Owners Club","Supercars in the UK","Audi V10 and R8","Genuine Hyundai N Enthusiasts,Helps,Discussions And Classified.","Aston Martin World","Aston Martin - World wide","Porsche 997 997.1 997.2 turbo Owners club","Audi Q8 / SQ8 / RSQ8","Porsche 991 GT3 RS owners group","BMW G20 M340i Owners Group","BMW M235i/M240i Official Owners Club","X3M / X4M Competition Owners Group","Ferrari For Sale By Owner","VW Golf R CS TCR GTi GTD MK7 & MK8 Cars For Sale UK","VW Golf GTI TCR Enthusiast and Owners Club","Mercedes GLC 43 AMG UK","Mercedes Benz G-Class Owners","U.K. Aston Martin Buy & Sell Group","UK Aston Martin Vantage Owners Group","Mercedes AMG GT GTR Owner's Group","Porsche GT4 RS","RANGE ROVER OWNER | Range Rover L460","Porsche Forum UK","Aston Martin UK","Range Rover Sports (Model L494) UK Forum","Audi RS3","MK8 Golf R Mods, Tunes, Marketplace and MORE!","Porsche 911 For Sale","Mercedes SL group UK","Ferrari F8 Tributo Fans UK","Lamborghinis and Lambo parts for sale","Mercedes-Benz AMG Group UK","Mercedes-Benz Forum UK","UK AMG C63/C63s - (Cars/Parts for Sale)","RANGE ROVER L322, L320, L405 & L494 OWNERS GROUP","Range Rover Buy, Sell, Trade","Porsche 911 GT3, GT2, GT4 & RS UK Owners group","All about Porsche UK","Supercars For Sale / Wanted UK","Aston Martin Cars & Parts","Aston Martin U.K.","Aston Martin DBX Owners Group","Aston Martin Owners Club","ASTON MARTIN Sales, Parts and Wants","Audi RS6 Avant c8","BMW X5/X6 G05/G06 UK Owners or Potential Owners","Golf R Owners Club UK","BMW M3 | M4 Owners U.K. F80 | F82 | F83","UK Ferrari for sale","LAMBORGHINI URUS FAN CLUB","Lamborghini Urus","Lamborghini UK","UK Classic & Supercars 101 Sales - Ferrari, Porsche, Lamborghini, Maserati","Bentley & Rolls-Royce Owners UK","Mercedes G Wagon Buy and Sell","G WAGON UK","VW T-Roc Owners - UK","Audi Q7 Owners Uk sales/parts/swap/wanted","BMW M2 Owners / Parts - UK & IRE","Audi S/RS (B9) Club (S4, S5, SQ5, RS4 & RS5)","RS4OC (UK) Private Sales/Wanted (Cars & Parts)","Audi B9 A4 S4 RS4 Enthusiasts","VW Golf MK7 Estate Owners Group","Audi Owners UK AOUK - Sales & Services","Abarth UK Owners Community","UK Abarth Owners Club","AUDI BiTDi Owners Group [A6/A7/Allroad/SQ5]","Toyota Supra Owners Club UK (GR / TRD friends)","Toyota GR Supra A90 Owners UK & Europe","Audi SQ5 Owners","Toyota Supra MK5 / MKV / A90 Discussions","VW T-Roc R Owners UK","GR Supra UK Owners","Skoda Octavia/Octavia vRS Owners & Enthusiasts","Skoda Estate Owners","MK3 Leon Cupra Owners Club","Touareg Owners Club UK","BMW M340d Owners Group","Golf R Estate owners group","Audi Q5 SQ5 UK Owners Group","Audi RSQ3 Owners Group","Audi Q3 & RSQ3 Owners Club","Audi Q5/SQ5 Owners & Enthusiasts","Civic Type R FK8 FK2 FL5 UK Buy And Sell","VW Golf MK8 Owners UK","BMW G SERIES UK OWNERS CLUB","Audi A3 / S3/ RS3 Official Owners Club - Buy - Sell - Trade A3OC","CIVIC 9TH GEN UK","BMW M3 M4 F80 F82 UK Owners Chat & Buy/Sell","Ford Focus ST/RS, Fiesta ST Parts/vehicle sales only","VW Owners Club","Audi A4 B9 Group UK","BMW F31 Touring UK","BMW G20/G21/G80/G81 UK Owners Club","BMW F30 Owners Club UK - Official Group Buy And Sell","Mercedes Owners UK & Ireland Fan Club","AMG GT Owners UK","AMG Parts & Cars For Sale","Audi Owners Group. selling, wanted and services UK ONLY","BMW Buy/Sell UK","Audi A6 / S6 / RS6 owners uk","Audi A6 C6 S6 Rs6 United Kingdom Owners","Trade To Trade Vehicles","Audi Owners Group UK","Audi A5/S5/RS5 UK owners","M5 F10 ONLY","BMW M5 G90 / M5 Touring G99 Chat Group","BMW E90 E91 E92 E93 UK SELLING GROUP & DISCUSSION","BMW F10/F11 Owners Club UK","BMW Owners UK - Buy, Sell, Trade & Community","BMW F80 F82 M3 M4 OWNERS UK","BMW M5 owners club for sale/advertising","BMW F90 M5 Owners Group","New Defender owners group uk!","Skoda Superb Owners Club GB","Hyundai i20N UK Owners","C63 AMG UK - Classified - Cars - Parts - For Sale","Cupra Ateca 300bhp Owners","BMW M50d","Audi A7 Owners Group UK","Audi A6 C7 CLUB UK","Audi Q7 / SQ7 Owners & Fans","MK3 Focus RS Owners Club","Audi Q5/SQ5 Classifieds","SEAT and CUPRA Ateca Owners Group UK","Hyundai i20N & i30N Owners Club","Honda CTR-FK2. The big search!","i20N Owners Club","AUDI A3 / S3 / RS3 8Y Owners Club UK","Focus ST owners UK","BMW M135i | F40 Owners Group","MK3 SEAT Leon & Leon Cupra buying and selling group UK","BMW X3M | X4M Owners U.K. F97 F98","BMW F97 X3M / F98 X4M Discussion / Marketplace","VW Mk7 & 7.5 Golf R UK Owners","Ford Focus, ST, RS Marketplace Buy/Sell/Trade Parts & Car Classifieds","Ford ST Owners Club","Audi SQ5 Owners UK","UK Golf R Owners Club (MK7, MK7.5, MK8 & MK8.5)","Honda Civic Type R FK2 (2015 - 2017) Car & Parts Buy / Sell - UK Only","VW Golf MK7 + MK7.5 R, GTI, GTE & GTD - Parts Buy & Sell Group UK","VW TOUAREG OWNERS CLUB","Volkswagen Golf MK6 MK7 MK8 GTi GTD R - Buy, Sell, Trade, Info, Owners","VW GOLF 7 GTI, TSI AND R SPARES AND IDEAS","Volkswagen Golf GTI Owners Club UK","Volkswagen Golf Parts & Cars For Sale And Swaps","BMW X5 OWNERS CLUB UK","W205 C Class Mercedes Benz (2014-21) UK","UK AMG C43 - (Cars/Parts for Sale)","AMG Mercedes Owners (UK)","MERCEDES BENZ CARS AND PARTS FOR SALE IN UK.","Focus ST & RS, Fiesta and Mondeo ST Buying & Selling UK ONLY","Focus RS Owners For Sale / Wanted","S3 RS3 8v Owners UK","Audi Q7/SQ7 (4M) Owners UK","Toyota Supra A90 MK5 Drivers Club UK","VW Touareg Owners UK","Golf GTI Clubsport S - UK Owners","Hyundai Owners UK","Porsche Cayenne UK","Porsche For Sale, Uk","Audi TT MK1","Bentley & Rolls-Royce Cars and Parts for Sale-Wanted","Rolls-Royce And Bentley Motor Cars Fans","UK Supercars For Sale / Wanted","Mercedes Benz For Sale UK","VW T-Roc","Cupra Formentor UK","BMW X5 G05 UK ONLY","Hyundai I30N Owners Club (UK)","Hyundai i20N Owners Club (UK)","skoda vrs owners club","Skoda Karoq Owners UK and Worldwide","C63 AMG - UK GROUP","Mercedes Benz C Class (W205 2014-21 model) UK","Mercedes GLC Benz Owners Club UK","C43 / C63s AMG Owners W205","AMG Owners Club","Hyundai i30 N Owners UK & Europe","BMW 335D & 435D Official Owners Club UK","VW Passat B8 UK Owners Club","Audi Owners Club","Audi A4 Owners Group UK","BMW M5 F10 Discussion Board/Marketplace","Used Ferrari For Sale","The Ferrari Marketplace","UK Ferrari for sale"];
+
+if (state.groups.length === 0) {
+  const existing = new Set();
+  ALL_GROUPS.forEach(name => {
+    const key = name.toLowerCase().trim();
+    if (!existing.has(key)) {
+      state.groups.push({ name, lastPosted:"", lastTemplate:"a", lastModel:"", lastSpec:"" });
+      existing.add(key);
+    }
+  });
+  save();
+}
+
+renderQueue();
+updateHeaderStats();
+</script>
+</body>
+</html>
