@@ -1,8 +1,9 @@
 {
   "name": "NTCB Posting Assistant",
-  "short_name": "Posting",
+  "short_name": "NTCB Poster",
   "description": "Noel The Car Buyer — Facebook group posting queue",
-  "start_url": "/index.html",
+  "start_url": "/Ntcb-poster/index.html",
+  "scope": "/Ntcb-poster/",
   "display": "standalone",
   "background_color": "#1a1a1a",
   "theme_color": "#1a1a1a",
